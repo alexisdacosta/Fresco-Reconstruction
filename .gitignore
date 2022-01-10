@@ -2,3 +2,6 @@ temp/
 .vscode/
 build/
 include/
+.old/
+.DS_Store
+src/__pycache__

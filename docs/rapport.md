@@ -50,11 +50,10 @@ Pour détecter les points d'intérêt, SURF utilise une approximation entière d
 **FAST : ** est une méthode de détection des coins, qui est utilisée pour extraire des points caractéristiques et, par la suite, pour suivre et cartographier des objets dans de nombreuses tâches de traitement d'images. Le détecteur de coins FAST a été développé à l'origine par Edward Rosten et Tom Drummond, et a été publié en 2006. \
 L'avantage le plus prometteur du détecteur de coins FAST est son efficacité de calcul. Comme son nom l'indique, il est en effet plus rapide que de nombreuses autres méthodes d'extraction de caractéristiques bien connues, telles que la différence de gaussiennes (DoG) utilisée par les détecteurs SIFT, SUSAN et Harris. 
 
-\newpage
 
 Ici, dans notre cas, nous avons opté pour l'utilisation de l'algorithme SIFT de par sa gratuité, sa simplicité et éfficacité. 
 
-\newpage 
+\newpage
 
 Voici, le détail de l'implémentation[^1] ci-dessus permettant d'établir les associations entre un fragment et la fresque initiale. 
 
@@ -183,26 +182,25 @@ Cependant, voici également une implémentation "maison" moins performante d'un 
 import random
 import numpy as np
 
-def ransac(data, estimate, is_inlier, sample_size, goal_inliers, max_iterations, stop_at_goal=True, random_seed=None):
+def ransac(data, sample_max_size, goal_inliers_nb, max_iterations):
     best = 0
     best_model = None
-    random.seed(random_seed)
+    random.seed(random)
     data = list(data)
     for i in range(max_iterations):
-        print(sample_size)
-        s = random.sample(data, int(sample_size))
+        s = random.sample(data, int(sample_max_size))
         m = estimate(s)
         ic = 0
         for j in range(len(data)):
             if np.abs(m.dot(augment([data[j]]).T)) < 0.1:
                 ic += 1
 
-        if ic > best_ic:
+        if ic > best:
             best = ic
             best_model = m
-            if ic > goal_inliers and stop_at_goal:
+            if ic > goal_inliers_nb:
                 break
-    return best_model, best_ic
+    return best_model, best
 ```
 
 Nous obtenons les résultats suivants : 
@@ -211,7 +209,7 @@ Nous obtenons les résultats suivants :
 
 \newpage 
 
-# III. Filtre des associations par le Lowe Ratio Tests
+# III. Filtre des associations par le Lowe Ratio Tests (Distance Euclidienne)
 Pour filtrer les associations, nous pouvons également utiliser la méthode du Lowe's ratio test. Ce test de ratio à pour but d'augmenter la robustesse de l'algorithme SIFT. \
 Le but de ce test est de se débarrasser des points qui ne sont pas assez distincts. L'idée générale est qu'il doit y avoir une différence suffisante entre la première meilleure correspondance et les secondes meilleures correspondances. \
 Pour cela, nous extraions une deux correspondances et nous comparerons leurs mesures de distance : 
@@ -221,9 +219,11 @@ Pour cela, nous extraions une deux correspondances et nous comparerons leurs mes
    
 Pour comparer l'éloignement des valeurs de ces deux distances respectives, nous utilisons un facteur ratio. Dans notre cas, la valeur est de $r=0.55$. 
 
-Voici ci-dessous une image expliquant la réalisation de ce test : 
+Voici ci-dessous une image[^2] expliquant la réalisation de ce test : 
 
 ![Explication du Lowe Ratio Test](docs/assets/Lowe-ratio.jpeg)
+
+[^2]: Image tiré de [Feature Matching methods comparison in OpenCV - https://datahacker.rs/feature-matching-methods-comparison-in-opencv/](https://datahacker.rs/feature-matching-methods-comparison-in-opencv/)
 
 Nous pouvons voir deux points caractéristiques $A$ et $B$ dans la première image. Nous allons faire correspondre les descripteurs de ces points avec la première meilleure correspondance et la deuxième meilleure correspondance dans une deuxième image. Le test de Lowe vérifie alors que les deux mesures de distance sont suffisamment différentes. Si elles le sont, ce point est préservé. En revanche, si elles ne sont pas assez distinctes, alors le point clé est éliminé et ne sera pas utilisé pour d'autres calculs.
 
@@ -316,3 +316,14 @@ Voici le resultat obtenu à partir du filtrage des associations avec le Lowe Rat
 ![Resultat de la reconstruction de la fresque](docs/assets/result.png)
 
 Comme nous pouvons voir, nos résulats ne pas forcément des plus satisfaisant. 
+
+\newpage
+
+# Sources
+
+- [Random sample consensus - https://en.wikipedia.org/wiki/Random_sample_consensus](https://en.wikipedia.org/wiki/Random_sample_consensus)
+- [Introduction to SIFT (Scale-Invariant Feature Transform) - https://docs.opencv.org/3.4/da/df5/tutorial_py_sift_intro.html](https://docs.opencv.org/3.4/da/df5/tutorial_py_sift_intro.html)
+- [Introduction to SURF (Speeded-Up Robust Features) - https://docs.opencv.org/4.x/df/dd2/tutorial_py_surf_intro.html](https://docs.opencv.org/4.x/df/dd2/tutorial_py_surf_intro.html)
+- [ORB (Oriented FAST and Rotated BRIEF) - https://docs.opencv.org/3.4/d1/d89/tutorial_py_orb.html](https://docs.opencv.org/3.4/d1/d89/tutorial_py_orb.html)
+- [Feature Matching - https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html](https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html)
+- [Feature Matching methods comparison in OpenCV - https://datahacker.rs/feature-matching-methods-comparison-in-opencv/](https://datahacker.rs/feature-matching-methods-comparison-in-opencv/)
